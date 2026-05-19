@@ -10,6 +10,7 @@ declare namespace _ZoteroTypes {
       "enableBionicReader": boolean;
       "disableForLanguages": string;
       "enableReaderToolbarButton": boolean;
+      "enableSoftPaperTheme": boolean;
       "opacityContrast": number;
       "weightContrast": number;
       "weightOffset": number;

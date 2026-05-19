@@ -8,6 +8,7 @@ export type FluentMessageId =
   | 'disableForLanguagesInput'
   | 'enableBionicReader'
   | 'enableReaderToolbarButton'
+  | 'enableSoftPaperTheme'
   | 'item-section-example1-head-text'
   | 'item-section-example1-sidenav-tooltip'
   | 'item-section-example2-button-tooltip'

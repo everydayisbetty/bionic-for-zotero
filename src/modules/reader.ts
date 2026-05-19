@@ -10,6 +10,25 @@ const scriptContent = {
   snapshot: "",
 };
 
+const softPaperStyleID = "bionic-reader-soft-paper-theme";
+const softPaperStyleContent = `
+html,
+body,
+#outerContainer,
+#mainContainer,
+#viewerContainer {
+  background-color: #f1eee6 !important;
+}
+
+#viewerContainer {
+  scrollbar-color: rgba(89, 78, 61, 0.35) #f1eee6;
+}
+
+.pdfViewer .page {
+  box-shadow: 0 2px 8px rgba(62, 54, 42, 0.18) !important;
+}
+`.trim();
+
 function initReader() {
   Zotero.Reader.registerEventListener(
     "renderToolbar",
@@ -182,16 +201,38 @@ async function refreshReaders(readers?: _ZoteroTypes.ReaderInstance[]) {
 
 function setWindowPrefs(reader: _ZoteroTypes.ReaderInstance, win: Window) {
   win.__BIONIC_READER_ENABLED = getCurrentItemStatus(reader.itemID || -1);
+  win.__BIONIC_SOFT_PAPER_ENABLED = !!getPref("enableSoftPaperTheme");
   win.__BIONIC_PARSING_OFFSET = getPref("parsingOffset") || 0;
   win.__BIONIC_OPACITY_CONTRAST = getPref("opacityContrast") || 0;
   win.__BIONIC_WEIGHT_CONTRAST = getPref("weightContrast") || 0;
   win.__BIONIC_WEIGHT_OFFSET = getPref("weightOffset") || 0;
+  updateSoftPaperTheme(win);
 }
 
 function deleteWindowPrefs(win: Window) {
+  win.__BIONIC_SOFT_PAPER_ENABLED = false;
+  updateSoftPaperTheme(win);
   delete win.__BIONIC_READER_ENABLED;
+  delete win.__BIONIC_SOFT_PAPER_ENABLED;
   delete win.__BIONIC_PARSING_OFFSET;
   delete win.__BIONIC_OPACITY_CONTRAST;
   delete win.__BIONIC_WEIGHT_CONTRAST;
   delete win.__BIONIC_WEIGHT_OFFSET;
+}
+
+function updateSoftPaperTheme(win: Window) {
+  const doc = win.document;
+  const existingStyle = doc.getElementById(softPaperStyleID);
+
+  if (!win.__BIONIC_SOFT_PAPER_ENABLED) {
+    existingStyle?.remove();
+    return;
+  }
+
+  const style = existingStyle || doc.createElement("style");
+  style.id = softPaperStyleID;
+  style.textContent = softPaperStyleContent;
+  if (!existingStyle) {
+    doc.head.appendChild(style);
+  }
 }

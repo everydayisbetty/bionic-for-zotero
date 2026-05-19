@@ -4,6 +4,7 @@ let prefsObservers: symbol[] = [];
 
 const PREFS_TO_OBSERVE = [
   "enableBionicReader",
+  "enableSoftPaperTheme",
   "parsingOffset",
   "opacityContrast",
   "weightContrast",
