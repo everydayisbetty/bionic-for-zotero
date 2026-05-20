@@ -27,6 +27,7 @@ type BionicColorPair = {
 type HighlightTerm = {
   words: string[];
   colors: BionicColorPair;
+  matchNormalizedWords?: boolean;
 };
 
 const bionicIntensityAdjustments: Record<
@@ -60,9 +61,8 @@ const bionicColorContrastIntensity: Record<
 };
 
 const structureWordColors = {
-  contrast: { boldColor: "#FF7518", lightColor: "#FFCE1B" },
+  contrast: { boldColor: "#7F00FF", lightColor: "#E0B0FF" },
   cause: { boldColor: "#2323FF", lightColor: "#8FD9FB" },
-  other: { boldColor: "#7F00FF", lightColor: "#E0B0FF" },
   customTerm: { boldColor: "#FF1A74", lightColor: "#FFA6C9" },
 };
 
@@ -78,51 +78,29 @@ const structureWordTerms: HighlightTerm[] = [
       "nonetheless",
       "yet",
       "in contrast",
+      "on the other hand",
+      "rather than",
+      "instead",
+      "instead of",
     ],
     structureWordColors.contrast,
   ),
   ...makeHighlightTerms(
     [
       "because",
-      "since",
+      "because of",
+      "due to",
       "therefore",
       "thus",
       "hence",
       "consequently",
-      "so",
       "as a result",
+      "so",
+      "since",
     ],
     structureWordColors.cause,
   ),
-  ...makeHighlightTerms(
-    [
-      "and",
-      "also",
-      "moreover",
-      "furthermore",
-      "additionally",
-      "if",
-      "unless",
-      "whether",
-      "when",
-      "while",
-      "of",
-      "in",
-      "on",
-      "at",
-      "by",
-      "for",
-      "with",
-      "from",
-      "into",
-      "between",
-      "among",
-      "during",
-      "through",
-    ],
-    structureWordColors.other,
-  ),
-];
+].sort(sortHighlightTermsByLength);
 
 function main() {
   patchIntentStatesGet();
@@ -458,7 +436,36 @@ function parseCustomHighlightTerms() {
     .map((words) => ({
       words,
       colors: structureWordColors.customTerm,
-    }));
+      matchNormalizedWords: true,
+    }))
+    .sort(sortHighlightTermsByLength);
+}
+
+function sortHighlightTermsByLength(a: HighlightTerm, b: HighlightTerm) {
+  return b.words.length - a.words.length;
+}
+
+function singularizeCustomTermWord(word: string) {
+  if (word.length > 4 && word.endsWith("ies")) {
+    return `${word.slice(0, -3)}y`;
+  }
+  if (word.length > 4 && /(ches|shes|xes|zes|sses|oes)$/.test(word)) {
+    return word.slice(0, -2);
+  }
+  if (word.length > 3 && word.endsWith("s") && !word.endsWith("ss")) {
+    return word.slice(0, -1);
+  }
+  return word;
+}
+
+function customTermWordMatches(tokenWord: string, termWord: string) {
+  if (tokenWord === termWord) {
+    return true;
+  }
+  return (
+    singularizeCustomTermWord(tokenWord) === termWord ||
+    singularizeCustomTermWord(tokenWord) === singularizeCustomTermWord(termWord)
+  );
 }
 
 function computeHighlightColors(glyphs: Glyph[]) {
@@ -505,19 +512,30 @@ function applyHighlightTerms(
   terms: HighlightTerm[],
   colorsByGlyph: Map<Glyph, BionicColorPair>,
 ) {
+  const matchedTokenIndexes = new Set<number>();
   for (const term of terms) {
     for (let i = 0; i <= tokens.length - term.words.length; i++) {
+      const tokenIndexes = term.words.map((_, offset) => i + offset);
+      if (
+        tokenIndexes.some((tokenIndex) => matchedTokenIndexes.has(tokenIndex))
+      ) {
+        continue;
+      }
       const matches = term.words.every((word, offset) => {
-        return tokens[i + offset].word === word;
+        const tokenWord = tokens[i + offset].word;
+        return term.matchNormalizedWords
+          ? customTermWordMatches(tokenWord, word)
+          : tokenWord === word;
       });
       if (!matches) {
         continue;
       }
-      for (let offset = 0; offset < term.words.length; offset++) {
-        tokens[i + offset].glyphs.forEach((glyph) => {
+      tokenIndexes.forEach((tokenIndex) => {
+        matchedTokenIndexes.add(tokenIndex);
+        tokens[tokenIndex].glyphs.forEach((glyph) => {
           colorsByGlyph.set(glyph, term.colors);
         });
-      }
+      });
     }
   }
 }
