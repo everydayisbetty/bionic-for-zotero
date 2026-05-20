@@ -11,6 +11,11 @@ declare namespace _ZoteroTypes {
       "disableForLanguages": string;
       "enableReaderToolbarButton": boolean;
       "enableSoftPaperTheme": boolean;
+      "enableStructureWordColors": boolean;
+      "enableCustomTermColors": boolean;
+      "customHighlightTerms": string;
+      "bionicIntensity": string;
+      "bionicContrastMode": string;
       "opacityContrast": number;
       "weightContrast": number;
       "weightOffset": number;

@@ -22,6 +22,72 @@
     data-l10n-id="enableSoftPaperTheme"
     native="true"
   />
+  <checkbox
+    id="__addonRef__-enableStructureWordColors"
+    preference="__prefsPrefix__.enableStructureWordColors"
+    data-l10n-id="enableStructureWordColors"
+    native="true"
+  />
+  <checkbox
+    id="__addonRef__-enableCustomTermColors"
+    preference="__prefsPrefix__.enableCustomTermColors"
+    data-l10n-id="enableCustomTermColors"
+    native="true"
+  />
+  <vbox>
+    <html:label
+      data-l10n-id="customHighlightTerms"
+      for="__addonRef__-customHighlightTerms"
+    ></html:label>
+    <html:textarea
+      id="__addonRef__-customHighlightTerms"
+      preference="__prefsPrefix__.customHighlightTerms"
+      data-l10n-id="customHighlightTermsInput"
+      rows="4"
+    ></html:textarea>
+  </vbox>
+  <hbox align="center">
+    <html:label
+      data-l10n-id="bionicIntensity"
+      for="__addonRef__-bionicIntensity"
+    ></html:label>
+    <html:select
+      id="__addonRef__-bionicIntensity"
+      preference="__prefsPrefix__.bionicIntensity"
+    >
+      <html:option
+        value="subtle"
+        data-l10n-id="bionicIntensity-subtle"
+      ></html:option>
+      <html:option
+        value="normal"
+        data-l10n-id="bionicIntensity-normal"
+      ></html:option>
+      <html:option
+        value="strong"
+        data-l10n-id="bionicIntensity-strong"
+      ></html:option>
+    </html:select>
+  </hbox>
+  <hbox align="center">
+    <html:label
+      data-l10n-id="bionicContrastMode"
+      for="__addonRef__-bionicContrastMode"
+    ></html:label>
+    <html:select
+      id="__addonRef__-bionicContrastMode"
+      preference="__prefsPrefix__.bionicContrastMode"
+    >
+      <html:option
+        value="weightOnly"
+        data-l10n-id="bionicContrastMode-weightOnly"
+      ></html:option>
+      <html:option
+        value="colorContrast"
+        data-l10n-id="bionicContrastMode-colorContrast"
+      ></html:option>
+    </html:select>
+  </hbox>
   <hbox align="center">
     <html:label
       data-l10n-id="disableForLanguages"

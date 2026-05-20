@@ -202,6 +202,15 @@ async function refreshReaders(readers?: _ZoteroTypes.ReaderInstance[]) {
 function setWindowPrefs(reader: _ZoteroTypes.ReaderInstance, win: Window) {
   win.__BIONIC_READER_ENABLED = getCurrentItemStatus(reader.itemID || -1);
   win.__BIONIC_SOFT_PAPER_ENABLED = !!getPref("enableSoftPaperTheme");
+  win.__BIONIC_STRUCTURE_WORD_COLORS_ENABLED = !!getPref(
+    "enableStructureWordColors",
+  );
+  win.__BIONIC_CUSTOM_TERM_COLORS_ENABLED = !!getPref(
+    "enableCustomTermColors",
+  );
+  win.__BIONIC_CUSTOM_HIGHLIGHT_TERMS = getPref("customHighlightTerms") || "";
+  win.__BIONIC_INTENSITY = getPref("bionicIntensity") || "normal";
+  win.__BIONIC_CONTRAST_MODE = getPref("bionicContrastMode") || "weightOnly";
   win.__BIONIC_PARSING_OFFSET = getPref("parsingOffset") || 0;
   win.__BIONIC_OPACITY_CONTRAST = getPref("opacityContrast") || 0;
   win.__BIONIC_WEIGHT_CONTRAST = getPref("weightContrast") || 0;
@@ -214,6 +223,11 @@ function deleteWindowPrefs(win: Window) {
   updateSoftPaperTheme(win);
   delete win.__BIONIC_READER_ENABLED;
   delete win.__BIONIC_SOFT_PAPER_ENABLED;
+  delete win.__BIONIC_STRUCTURE_WORD_COLORS_ENABLED;
+  delete win.__BIONIC_CUSTOM_TERM_COLORS_ENABLED;
+  delete win.__BIONIC_CUSTOM_HIGHLIGHT_TERMS;
+  delete win.__BIONIC_INTENSITY;
+  delete win.__BIONIC_CONTRAST_MODE;
   delete win.__BIONIC_PARSING_OFFSET;
   delete win.__BIONIC_OPACITY_CONTRAST;
   delete win.__BIONIC_WEIGHT_CONTRAST;

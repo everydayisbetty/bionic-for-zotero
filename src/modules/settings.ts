@@ -5,6 +5,11 @@ let prefsObservers: symbol[] = [];
 const PREFS_TO_OBSERVE = [
   "enableBionicReader",
   "enableSoftPaperTheme",
+  "enableStructureWordColors",
+  "enableCustomTermColors",
+  "customHighlightTerms",
+  "bionicIntensity",
+  "bionicContrastMode",
   "parsingOffset",
   "opacityContrast",
   "weightContrast",

@@ -19,6 +19,111 @@ let firstRenderTriggered = false;
 
 let isWordBroken = false;
 
+type BionicColorPair = {
+  boldColor: string;
+  lightColor: string;
+};
+
+type HighlightTerm = {
+  words: string[];
+  colors: BionicColorPair;
+};
+
+const bionicIntensityAdjustments: Record<
+  string,
+  { opacityContrastOffset: number; weightContrastOffset: number }
+> = {
+  subtle: { opacityContrastOffset: -1, weightContrastOffset: -1 },
+  normal: { opacityContrastOffset: 0, weightContrastOffset: 0 },
+  strong: { opacityContrastOffset: 1, weightContrastOffset: 1 },
+};
+
+const bionicColorContrastIntensity: Record<
+  string,
+  BionicColorPair & { weightContrast: number }
+> = {
+  subtle: {
+    boldColor: "#3f3f3f",
+    lightColor: "#8f8f8f",
+    weightContrast: 1,
+  },
+  normal: {
+    boldColor: "#1f1f1f",
+    lightColor: "#8a8a8a",
+    weightContrast: 2,
+  },
+  strong: {
+    boldColor: "#000000",
+    lightColor: "#a0a0a0",
+    weightContrast: 3,
+  },
+};
+
+const structureWordColors = {
+  contrast: { boldColor: "#FF7518", lightColor: "#FFCE1B" },
+  cause: { boldColor: "#2323FF", lightColor: "#8FD9FB" },
+  other: { boldColor: "#7F00FF", lightColor: "#E0B0FF" },
+  customTerm: { boldColor: "#FF1A74", lightColor: "#FFA6C9" },
+};
+
+const structureWordTerms: HighlightTerm[] = [
+  ...makeHighlightTerms(
+    [
+      "but",
+      "however",
+      "although",
+      "though",
+      "whereas",
+      "nevertheless",
+      "nonetheless",
+      "yet",
+      "in contrast",
+    ],
+    structureWordColors.contrast,
+  ),
+  ...makeHighlightTerms(
+    [
+      "because",
+      "since",
+      "therefore",
+      "thus",
+      "hence",
+      "consequently",
+      "so",
+      "as a result",
+    ],
+    structureWordColors.cause,
+  ),
+  ...makeHighlightTerms(
+    [
+      "and",
+      "also",
+      "moreover",
+      "furthermore",
+      "additionally",
+      "if",
+      "unless",
+      "whether",
+      "when",
+      "while",
+      "of",
+      "in",
+      "on",
+      "at",
+      "by",
+      "for",
+      "with",
+      "from",
+      "into",
+      "between",
+      "among",
+      "during",
+      "through",
+    ],
+    structureWordColors.other,
+  ),
+];
+
 function main() {
   patchIntentStatesGet();
 
@@ -100,13 +205,35 @@ function patchCanvasGraphicsShowText(
       return original_showText.apply(this, [glyphs]);
     }
 
-    const opacityContrast = window.__BIONIC_OPACITY_CONTRAST || 1;
+    const intensity =
+      bionicIntensityAdjustments[window.__BIONIC_INTENSITY || "normal"] ||
+      bionicIntensityAdjustments.normal;
+    const useColorContrast =
+      window.__BIONIC_CONTRAST_MODE === "colorContrast";
+    const colorContrastIntensity =
+      bionicColorContrastIntensity[window.__BIONIC_INTENSITY || "normal"] ||
+      bionicColorContrastIntensity.normal;
+    const opacityContrast = useColorContrast
+      ? 1
+      : Math.max(
+          (window.__BIONIC_OPACITY_CONTRAST || 1) +
+            intensity.opacityContrastOffset,
+          1,
+        );
 
-    const weightContrast = window.__BIONIC_WEIGHT_CONTRAST || 1;
+    const weightContrast = useColorContrast
+      ? colorContrastIntensity.weightContrast
+      : Math.max(
+          (window.__BIONIC_WEIGHT_CONTRAST || 1) +
+            intensity.weightContrastOffset,
+          1,
+        );
     const weightOffset = window.__BIONIC_WEIGHT_OFFSET || 0;
 
     const savedFont = this.ctx.font;
     const savedOpacity = this.ctx.globalAlpha;
+    const savedFillStyle = this.ctx.fillStyle;
+    const savedStrokeStyle = this.ctx.strokeStyle;
 
     const { bold, light } = computeFont({
       font: savedFont,
@@ -117,9 +244,23 @@ function patchCanvasGraphicsShowText(
     });
 
     const newGlyphData = computeBionicGlyphs(glyphs);
+    const highlightColorsByGlyph =
+      useColorContrast &&
+      (window.__BIONIC_STRUCTURE_WORD_COLORS_ENABLED ||
+        window.__BIONIC_CUSTOM_TERM_COLORS_ENABLED)
+        ? computeHighlightColors(glyphs)
+        : undefined;
 
     for (const { glyphs: newG, isBold } of newGlyphData) {
       this.ctx.font = isBold ? bold.font : light.font;
+      if (useColorContrast) {
+        const colors =
+          getHighlightColors(newG, highlightColorsByGlyph) ||
+          colorContrastIntensity;
+        const color = isBold ? colors.boldColor : colors.lightColor;
+        this.ctx.fillStyle = color;
+        this.ctx.strokeStyle = color;
+      }
       // If use greater contrast is enabled, set text opacity to less than 1
       if (opacityContrast > 1 && !isBold) {
         this.ctx.globalAlpha = light.alpha;
@@ -127,6 +268,8 @@ function patchCanvasGraphicsShowText(
       original_showText.apply(this, [newG]);
       this.ctx.font = savedFont;
       this.ctx.globalAlpha = savedOpacity;
+      this.ctx.fillStyle = savedFillStyle;
+      this.ctx.strokeStyle = savedStrokeStyle;
     }
 
     return undefined;
@@ -290,6 +433,109 @@ function computeBionicGlyphs(glyphs: Glyph[]) {
     });
   }
   return newGlyphData;
+}
+
+function makeHighlightTerms(terms: string[], colors: BionicColorPair) {
+  return terms
+    .map((term) => normalizeTerm(term))
+    .filter((words) => words.length)
+    .map((words) => ({ words, colors }));
+}
+
+function normalizeTerm(term: string) {
+  return term
+    .trim()
+    .toLocaleLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+function parseCustomHighlightTerms() {
+  return String(window.__BIONIC_CUSTOM_HIGHLIGHT_TERMS || "")
+    .split(/\r?\n/)
+    .map((term) => normalizeTerm(term))
+    .filter((words) => words.length)
+    .map((words) => ({
+      words,
+      colors: structureWordColors.customTerm,
+    }));
+}
+
+function computeHighlightColors(glyphs: Glyph[]) {
+  const colorsByGlyph = new Map<Glyph, BionicColorPair>();
+  const WORD_CHAR_REGEX = /^[A-Za-z0-9]+$/;
+  const tokens: { word: string; glyphs: Glyph[] }[] = [];
+  let token = "";
+  let tokenGlyphs: Glyph[] = [];
+
+  function flushToken() {
+    if (token) {
+      tokens.push({
+        word: token.toLocaleLowerCase(),
+        glyphs: tokenGlyphs,
+      });
+    }
+    token = "";
+    tokenGlyphs = [];
+  }
+
+  for (const glyph of glyphs) {
+    const str = typeof glyph === "number" ? " " : glyph.unicode;
+    if (WORD_CHAR_REGEX.test(str)) {
+      token += str;
+      tokenGlyphs.push(glyph);
+    } else {
+      flushToken();
+    }
+  }
+  flushToken();
+
+  if (window.__BIONIC_STRUCTURE_WORD_COLORS_ENABLED) {
+    applyHighlightTerms(tokens, structureWordTerms, colorsByGlyph);
+  }
+  if (window.__BIONIC_CUSTOM_TERM_COLORS_ENABLED) {
+    applyHighlightTerms(tokens, parseCustomHighlightTerms(), colorsByGlyph);
+  }
+
+  return colorsByGlyph;
+}
+
+function applyHighlightTerms(
+  tokens: { word: string; glyphs: Glyph[] }[],
+  terms: HighlightTerm[],
+  colorsByGlyph: Map<Glyph, BionicColorPair>,
+) {
+  for (const term of terms) {
+    for (let i = 0; i <= tokens.length - term.words.length; i++) {
+      const matches = term.words.every((word, offset) => {
+        return tokens[i + offset].word === word;
+      });
+      if (!matches) {
+        continue;
+      }
+      for (let offset = 0; offset < term.words.length; offset++) {
+        tokens[i + offset].glyphs.forEach((glyph) => {
+          colorsByGlyph.set(glyph, term.colors);
+        });
+      }
+    }
+  }
+}
+
+function getHighlightColors(
+  glyphs: Glyph[],
+  colorsByGlyph?: Map<Glyph, BionicColorPair>,
+) {
+  if (!colorsByGlyph) {
+    return undefined;
+  }
+  for (const glyph of glyphs) {
+    const colors = colorsByGlyph.get(glyph);
+    if (colors) {
+      return colors;
+    }
+  }
+  return undefined;
 }
 
 function refresh() {
